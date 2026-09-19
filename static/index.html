@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fa-IR" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>همراه مالی</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand"><span>₪</span><b>همراه مالی</b></div>
+        <nav>
+          <button class="nav-link active" data-page="dashboard">داشبورد</button>
+          <button class="nav-link" data-page="transactions">درآمد و هزینه</button>
+          <button class="nav-link" data-page="commitments">تعهدات مالی</button>
+          <button class="nav-link" data-page="releases">تاریخچهٔ تغییرات</button>
+        </nav>
+        <p class="local-note">داده‌ها در دیتابیس SQLite روی همین دستگاه نگهداری می‌شوند.<br>نگارش ۰.۳.۰</p>
+      </aside>
+      <main>
+        <section id="dashboard" class="page active">
+          <header><div><h1>داشبورد مالی</h1><p>نمای ماهانه از پرداخت واقعی و تعهدات برنامه‌ریزی‌شده</p></div><label class="month-filter">ماه شمسی <select id="dashboardMonth"></select></label></header>
+          <details class="help"><summary>؟ راهنمای داشبورد</summary><p>مبالغ «پرداخت واقعی» از رکوردهای پرداخت و تراکنش ثبت‌شده محاسبه می‌شوند. تا زمانی که داده‌ای ثبت نشود، کارت‌ها صفر را نشان می‌دهند.</p></details>
+          <div class="stats">
+            <article><small>درآمد ماه</small><strong id="incomeValue">—</strong></article>
+            <article><small>هزینهٔ ثبت‌شده</small><strong id="expenseValue">—</strong></article>
+            <article><small>ماندهٔ تعهدات ماه</small><strong id="remainingValue">—</strong></article>
+            <article><small>تعهدات معوق</small><strong id="overdueValue">—</strong></article>
+          </div>
+          <div class="columns">
+            <article class="panel"><div class="panel-title"><h2>تعهدات ماه انتخاب‌شده</h2><span id="commitmentSummary"></span></div><div class="progress"><i id="commitmentProgress"></i></div><div class="split-total"><span>برنامه‌ریزی‌شده: <b id="plannedValue">—</b></span><span>پرداخت واقعی: <b id="paidValue">—</b></span></div></article>
+            <article class="panel"><div class="panel-title"><h2>سررسیدهای نیازمند اقدام</h2><button class="quiet" data-page="commitments">مدیریت</button></div><div id="upcomingList" class="list empty">موردی برای نمایش نیست.</div></article>
+          </div>
+        </section>
+
+        <section id="transactions" class="page">
+          <header><div><h1>ثبت درآمد و هزینه</h1><p>هر تراکنش واقعی یک بار ثبت می‌شود.</p></div></header>
+          <div class="columns form-columns">
+            <form id="transactionForm" class="panel form-panel">
+              <h2>تراکنش جدید</h2>
+              <div class="field"><label for="transactionType">نوع</label><select id="transactionType"><option value="expense">هزینه</option><option value="income">درآمد</option></select></div>
+              <div class="field"><label for="transactionAmount">مبلغ (تومان)</label><input id="transactionAmount" type="number" min="1" required /></div>
+              <div class="field"><label for="transactionDate">تاریخ شمسی</label><input id="transactionDate" inputmode="numeric" placeholder="۱۴۰۵/۰۶/۲۸" required /></div>
+              <div class="field"><label for="transactionCategory">دسته‌بندی</label><select id="transactionCategory" required></select></div>
+              <div class="field"><label for="transactionAccount">حساب</label><select id="transactionAccount"></select></div>
+              <div class="field"><label for="transactionNote">شرح</label><input id="transactionNote" maxlength="300" placeholder="مثلاً خرید سوپرمارکت" required /></div>
+              <details class="help"><summary>؟ راهنمای ثبت تراکنش</summary><p>این فرم فقط یک درآمد یا هزینهٔ واقعی ثبت می‌کند. دسته باید با نوع تراکنش هم‌خوان باشد و مبلغ باید بزرگ‌تر از صفر باشد.</p></details>
+              <button class="primary" type="submit">ثبت تراکنش</button><p class="form-message" id="transactionMessage" role="status" aria-live="polite"></p>
+            </form>
+            <article class="panel"><div class="panel-title"><h2>تراکنش‌های اخیر</h2><label class="month-filter">ماه شمسی <select id="transactionMonth"></select></label></div><div class="table-wrap"><table><thead><tr><th>تاریخ</th><th>شرح</th><th>دسته</th><th>نوع</th><th>مبلغ</th></tr></thead><tbody id="transactionRows"></tbody></table></div></article>
+          </div>
+        </section>
+
+        <section id="commitments" class="page">
+          <header><div><h1>تعهدات مالی</h1><p>تعهد، سررسید و پرداخت واقعی، رکوردهای جداگانه‌اند.</p></div></header>
+          <div class="columns form-columns">
+            <form id="commitmentForm" class="panel form-panel">
+              <h2>تعهد جدید</h2>
+              <div class="field"><label for="commitmentTitle">عنوان</label><input id="commitmentTitle" placeholder="مثلاً وام بانک ..." required /></div>
+              <div class="field"><label for="commitmentKind">نوع</label><select id="commitmentKind"><option>وام</option><option>هزینهٔ ثابت</option><option>چک</option><option>بدهی</option></select></div>
+              <div class="field"><label for="commitmentTotal">مبلغ کل (اختیاری)</label><input id="commitmentTotal" type="number" min="1" /></div>
+              <div class="field"><label for="installmentAmount">مبلغ هر سررسید</label><input id="installmentAmount" type="number" min="1" required /></div>
+              <div class="field"><label for="firstDueDate">اولین سررسید شمسی</label><input id="firstDueDate" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۰۱" required /></div>
+              <div class="field"><label for="installmentCount">تعداد سررسید</label><input id="installmentCount" type="number" min="1" value="12" required /></div>
+              <details class="help"><summary>؟ راهنمای تعهد</summary><p>برای هر تعهد، برنامه سررسیدها از تاریخ نخست و تعداد سررسید ساخته می‌شود. پرداخت‌های بعدی به هر سررسید متصل می‌شوند.</p></details>
+              <button class="primary" type="submit">ایجاد برنامهٔ پرداخت</button><p class="form-message" id="commitmentMessage" role="status" aria-live="polite"></p>
+            </form>
+            <article class="panel"><div class="panel-title"><h2>سررسیدها</h2><label class="month-filter">ماه شمسی <select id="installmentMonth"></select></label></div><div class="table-wrap"><table><thead><tr><th>عنوان</th><th>سررسید</th><th>مبلغ</th><th>پرداخت</th><th>مانده</th><th>وضعیت</th></tr></thead><tbody id="installmentRows"></tbody></table></div></article>
+          </div>
+          <article class="panel payment-panel"><form id="paymentForm"><div class="panel-title"><h2>ثبت پرداخت سررسید</h2><span>پرداخت جزئی نیز پشتیبانی می‌شود.</span></div><details class="help"><summary>؟ راهنمای پرداخت</summary><p>مبلغ ثبت‌شده نباید از ماندهٔ همان سررسید بیشتر باشد. یک پرداخت می‌تواند بخشی از مبلغ سررسید باشد.</p></details><div class="payment-fields"><div class="field"><label for="paymentInstallment">سررسید</label><select id="paymentInstallment" required></select></div><div class="field"><label for="paymentAmount">مبلغ پرداخت</label><input id="paymentAmount" type="number" min="1" required /></div><div class="field"><label for="paymentDate">تاریخ پرداخت شمسی</label><input id="paymentDate" inputmode="numeric" placeholder="۱۴۰۵/۰۶/۲۸" required /></div><div class="field"><label for="paymentAccount">حساب</label><select id="paymentAccount"></select></div><button class="primary" type="submit">ثبت پرداخت</button></div><p class="form-message" id="paymentMessage" role="status" aria-live="polite"></p></form></article>
+        </section>
+        <section id="releases" class="page"><header><div><h1>تاریخچهٔ تغییرات</h1><p>تغییرات ثبت‌شدهٔ برنامه از جدیدترین به قدیمی‌ترین</p></div></header><details class="help"><summary>؟ راهنمای تاریخچه</summary><p>هر نگارش، زمان انتشار، شرح و بخش‌های تحت تأثیر را نشان می‌دهد. تاریخچهٔ موجود حذف یا بازنویسی نمی‌شود.</p></details><div id="releaseList" class="release-list" aria-live="polite"></div></section>
+      </main>
+    </div>
+    <template id="emptyRow"><tr><td colspan="6" class="empty-cell">هنوز داده‌ای ثبت نشده است.</td></tr></template>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.py[cod]
+data/*.db
+build/
+dist/
+release/
+build-release/
+build-shamsi/
+*.spec
+.pytest_cache/

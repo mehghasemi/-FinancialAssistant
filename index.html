@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>همراه مالی — نمونهٔ اولیه</title>
+    <style>
+      :root { --bg:#f6f7fb; --surface:#fff; --ink:#192235; --muted:#6d778a; --line:#e6e9f0; --primary:#176b5b; --primary-soft:#e4f4ef; --danger:#b6384d; --danger-soft:#fff0f2; --warning:#a96700; --warning-soft:#fff6df; --shadow:0 12px 30px rgba(31,42,68,.08); }
+      * { box-sizing:border-box; }
+      body { margin:0; font-family:Tahoma, Arial, sans-serif; background:var(--bg); color:var(--ink); }
+      button, input, select { font:inherit; }
+      button { cursor:pointer; }
+      .app { min-height:100vh; display:grid; grid-template-columns:250px 1fr; }
+      aside { background:#112a27; color:#effcf8; padding:26px 16px; display:flex; flex-direction:column; gap:28px; }
+      .brand { display:flex; align-items:center; gap:10px; padding:0 10px; font-size:19px; font-weight:bold; }
+      .brand-mark { width:34px; height:34px; display:grid; place-items:center; border-radius:10px; background:#36a78e; color:#fff; }
+      .nav { display:grid; gap:5px; }
+      .nav button { border:0; color:#c7dbd7; background:transparent; padding:12px 13px; border-radius:10px; text-align:right; }
+      .nav button:hover, .nav button.active { background:#21433e; color:#fff; }
+      .nav small { color:#9eb7b1; margin-top:auto; line-height:1.8; padding:0 10px; }
+      main { padding:30px clamp(18px,4vw,52px); max-width:1500px; width:100%; margin:auto; }
+      .topbar, .section-head, .filters, .form-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+      .topbar { justify-content:space-between; margin-bottom:28px; }
+      h1 { margin:0 0 7px; font-size:26px; }
+      h2 { font-size:18px; margin:0; }
+      p { margin:0; }
+      .subtle { color:var(--muted); font-size:13px; }
+      .primary, .secondary { border:0; border-radius:10px; padding:10px 14px; font-weight:bold; }
+      .primary { background:var(--primary); color:#fff; }
+      .secondary { color:var(--primary); background:var(--primary-soft); }
+      .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:15px; }
+      .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px; box-shadow:var(--shadow); }
+      .metric { display:grid; gap:9px; }
+      .metric b { font-size:22px; }
+      .metric .up { color:var(--primary); } .metric .warn { color:var(--warning); } .metric .danger { color:var(--danger); }
+      .main-grid { display:grid; grid-template-columns:1.25fr .75fr; gap:18px; margin-top:18px; }
+      .section-head { justify-content:space-between; margin-bottom:17px; }
+      .progress { height:11px; background:#edf0f4; border-radius:20px; overflow:hidden; margin:14px 0 8px; }
+      .progress > span { display:block; height:100%; width:58%; background:var(--primary); border-radius:inherit; }
+      .list { display:grid; gap:10px; }
+      .item { padding:12px 0; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:16px; align-items:center; }
+      .item:last-child { border-bottom:0; padding-bottom:0; }
+      .item-title { font-weight:bold; font-size:14px; margin-bottom:5px; }
+      .amount { font-weight:bold; white-space:nowrap; }
+      .badge { display:inline-block; padding:4px 8px; border-radius:99px; font-size:11px; background:var(--primary-soft); color:var(--primary); }
+      .badge.warning { background:var(--warning-soft); color:var(--warning); } .badge.danger { background:var(--danger-soft); color:var(--danger); }
+      .chart { height:188px; display:flex; align-items:end; gap:13px; padding:10px 5px 0; border-bottom:1px solid var(--line); }
+      .bar-group { height:100%; display:grid; grid-template-columns:1fr 1fr; align-items:end; gap:3px; flex:1; min-width:21px; position:relative; }
+      .bar { background:#92cabd; border-radius:6px 6px 0 0; }.bar.actual { background:var(--primary); }
+      .month { text-align:center; font-size:11px; color:var(--muted); margin-top:8px; }
+      .page { display:none; }.page.active { display:block; }
+      .filters { margin-bottom:16px; }.filters select, .filters input, .field input, .field select { border:1px solid var(--line); background:#fff; border-radius:9px; padding:10px 11px; color:var(--ink); }
+      .filters select { min-width:145px; }
+      table { width:100%; border-collapse:collapse; font-size:13px; } th { text-align:right; color:var(--muted); background:#fafbfc; font-weight:normal; } th,td { padding:13px 10px; border-bottom:1px solid var(--line); } td:last-child, th:last-child { text-align:left; } .table-wrap { overflow:auto; }
+      .empty-note { margin-top:14px; color:var(--muted); font-size:12px; }
+      dialog { width:min(720px,calc(100% - 28px)); border:0; border-radius:16px; padding:0; box-shadow:0 24px 80px rgba(0,0,0,.22); } dialog::backdrop { background:rgba(15,24,40,.43); }
+      .dialog-content { padding:22px; }.dialog-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }.close { background:transparent; border:0; font-size:24px; color:var(--muted); }
+      .field { display:grid; gap:7px; flex:1 1 180px; }.field label { font-size:13px; color:var(--muted); }.form-actions { display:flex; gap:10px; justify-content:flex-start; margin-top:22px; }
+      .phase { border-right:3px solid var(--primary); padding:0 14px 20px 0; margin-right:8px; }.phase:last-child { padding-bottom:0; }.phase h3 { font-size:15px; margin:0 0 6px; }.phase p { color:var(--muted); font-size:13px; line-height:1.8; }
+      @media (max-width:900px) { .app { grid-template-columns:1fr; } aside { padding:14px; gap:12px; } .nav { grid-template-columns:repeat(3,1fr); } .nav button { text-align:center; font-size:12px; padding:9px 4px; } aside small { display:none; } .grid { grid-template-columns:repeat(2,1fr); } .main-grid { grid-template-columns:1fr; } }
+      @media (max-width:520px) { main { padding:20px 14px; } .grid { grid-template-columns:1fr; } .topbar { align-items:flex-start; } h1 { font-size:22px; } .nav { grid-template-columns:repeat(2,1fr); } }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside>
+        <div class="brand"><span class="brand-mark">₪</span><span>همراه مالی</span></div>
+        <nav class="nav" aria-label="ناوبری اصلی">
+          <button class="active" data-view="dashboard">داشبورد</button>
+          <button data-view="transactions">درآمد و هزینه</button>
+          <button data-view="commitments">تعهدات مالی</button>
+          <button data-view="reports">گزارش‌ها</button>
+          <button data-view="roadmap">نقشهٔ راه</button>
+        </nav>
+        <small>نمونهٔ اولیهٔ آفلاین<br>داده‌ها در نسخهٔ نهایی روی دستگاه شما ذخیره خواهند شد.</small>
+      </aside>
+      <main>
+        <section id="dashboard" class="page active">
+          <div class="topbar"><div><h1>نمای مالی شهریور ۱۴۰۵</h1><p class="subtle">تصویر سریع از بودجه، پرداخت‌ها و سررسیدها</p></div><button class="primary" data-open="transactionDialog">+ ثبت تراکنش</button></div>
+          <div class="grid">
+            <article class="card metric"><span class="subtle">درآمد این ماه</span><b>۴۲٬۰۰۰٬۰۰۰ تومان</b><span class="up">۵٪ بیشتر از ماه قبل</span></article>
+            <article class="card metric"><span class="subtle">هزینهٔ پرداخت‌شده</span><b>۲۴٬۳۰۰٬۰۰۰ تومان</b><span class="subtle">از بودجهٔ ۳۰٬۰۰۰٬۰۰۰ تومان</span></article>
+            <article class="card metric"><span class="subtle">ماندهٔ تعهدات ماه</span><b>۵٬۷۰۰٬۰۰۰ تومان</b><span class="warn">۳ سررسید در ۷ روز آینده</span></article>
+            <article class="card metric"><span class="subtle">تعهدات معوق</span><b>۱٬۲۰۰٬۰۰۰ تومان</b><span class="danger">نیازمند پیگیری</span></article>
+          </div>
+          <div class="main-grid">
+            <article class="card"><div class="section-head"><h2>بودجه در برابر پرداخت واقعی</h2><span class="badge">۶ ماه اخیر</span></div><div class="chart" aria-label="نمودار بودجه و پرداخت واقعی شش ماه اخیر"><div class="bar-group"><i class="bar" style="height:54%"></i><i class="bar actual" style="height:46%"></i></div><div class="bar-group"><i class="bar" style="height:61%"></i><i class="bar actual" style="height:58%"></i></div><div class="bar-group"><i class="bar" style="height:57%"></i><i class="bar actual" style="height:49%"></i></div><div class="bar-group"><i class="bar" style="height:70%"></i><i class="bar actual" style="height:64%"></i></div><div class="bar-group"><i class="bar" style="height:67%"></i><i class="bar actual" style="height:55%"></i></div><div class="bar-group"><i class="bar" style="height:80%"></i><i class="bar actual" style="height:65%"></i></div></div><div class="chart-labels"><span class="month">فروردین</span><span class="month">اردیبهشت</span><span class="month">خرداد</span><span class="month">تیر</span><span class="month">مرداد</span><span class="month">شهریور</span></div><p class="empty-note">رنگ روشن: بودجهٔ برنامه‌ریزی‌شده · رنگ تیره: پرداخت واقعی</p></article>
+            <article class="card"><div class="section-head"><h2>سررسیدهای نزدیک</h2><button class="secondary" data-view-link="commitments">مشاهده همه</button></div><div class="list"><div class="item"><div><div class="item-title">قسط وام سپه</div><span class="badge warning">۴ روز دیگر</span></div><div class="amount">۱٬۸۰۰٬۰۰۰</div></div><div class="item"><div><div class="item-title">هزینهٔ مدرسه</div><span class="badge danger">۲ روز معوق</span></div><div class="amount">۱٬۲۰۰٬۰۰۰</div></div><div class="item"><div><div class="item-title">اینترنت منزل</div><span class="badge">۸ روز دیگر</span></div><div class="amount">۳۵۰٬۰۰۰</div></div></div></article>
+          </div>
+          <div class="main-grid"><article class="card"><div class="section-head"><h2>پیشرفت بودجهٔ ماه</h2><b>۸۱٪</b></div><div class="progress"><span></span></div><p class="subtle">۲۴٬۳۰۰٬۰۰۰ تومان از سقف ۳۰٬۰۰۰٬۰۰۰ تومان هزینه شده است.</p></article><article class="card"><div class="section-head"><h2>اقدام سریع</h2></div><div class="form-row"><button class="secondary" data-open="transactionDialog">ثبت هزینه</button><button class="secondary" data-open="commitmentDialog">تعهد جدید</button><button class="secondary" data-open="paymentDialog">ثبت پرداخت قسط</button></div></article></div>
+        </section>
+        <section id="transactions" class="page"><div class="topbar"><div><h1>درآمد و هزینه</h1><p class="subtle">هر تراکنش واقعی فقط یک‌بار ثبت می‌شود.</p></div><button class="primary" data-open="transactionDialog">+ ثبت تراکنش</button></div><div class="card"><div class="filters"><select><option>همهٔ ماه‌ها</option><option>شهریور ۱۴۰۵</option><option>مهر ۱۴۰۵</option></select><select><option>همهٔ دسته‌ها</option><option>خانه</option><option>خوراک</option><option>حمل‌ونقل</option></select><select><option>همهٔ انواع</option><option>هزینه</option><option>درآمد</option></select><input placeholder="جست‌وجو در شرح تراکنش" /></div><div class="table-wrap"><table><thead><tr><th>تاریخ</th><th>شرح</th><th>دسته</th><th>نوع</th><th>مبلغ</th><th>حساب</th></tr></thead><tbody id="transactionRows"><tr><td>۱۴۰۵/۰۶/۲۶</td><td>خرید مواد غذایی</td><td>خوراک</td><td><span class="badge warning">هزینه</span></td><td>۱٬۴۵۰٬۰۰۰</td><td>کارت بانکی</td></tr><tr><td>۱۴۰۵/۰۶/۲۵</td><td>حقوق ماهانه</td><td>درآمد شغلی</td><td><span class="badge">درآمد</span></td><td>۴۲٬۰۰۰٬۰۰۰</td><td>حساب اصلی</td></tr></tbody></table></div></div></section>
+        <section id="commitments" class="page"><div class="topbar"><div><h1>تعهدات مالی</h1><p class="subtle">تعهد، سررسید و پرداخت واقعی جدا از هم مدیریت می‌شوند.</p></div><div class="form-row"><button class="secondary" data-open="paymentDialog">ثبت پرداخت</button><button class="primary" data-open="commitmentDialog">+ تعهد جدید</button></div></div><div class="card"><div class="filters"><select><option>شهریور ۱۴۰۵</option><option>مهر ۱۴۰۵</option><option>همهٔ ماه‌ها</option></select><select><option>همهٔ وضعیت‌ها</option><option>پرداخت‌نشده</option><option>پرداخت جزئی</option><option>پرداخت‌شده</option><option>معوق</option></select><select><option>همهٔ انواع</option><option>وام</option><option>هزینهٔ ثابت</option><option>چک</option></select></div><div class="table-wrap"><table><thead><tr><th>عنوان</th><th>سررسید</th><th>مبلغ قسط</th><th>پرداخت واقعی</th><th>ماندهٔ قسط</th><th>وضعیت</th></tr></thead><tbody><tr><td>وام سپه</td><td>۱۴۰۵/۰۶/۳۱</td><td>۱٬۸۰۰٬۰۰۰</td><td>۰</td><td>۱٬۸۰۰٬۰۰۰</td><td><span class="badge warning">سررسید نزدیک</span></td></tr><tr><td>هزینهٔ مدرسه</td><td>۱۴۰۵/۰۶/۲۴</td><td>۱٬۲۰۰٬۰۰۰</td><td>۰</td><td>۱٬۲۰۰٬۰۰۰</td><td><span class="badge danger">معوق</span></td></tr><tr><td>اینترنت منزل</td><td>۱۴۰۵/۰۷/۰۵</td><td>۳۵۰٬۰۰۰</td><td>۰</td><td>۳۵۰٬۰۰۰</td><td><span class="badge">پرداخت‌نشده</span></td></tr><tr><td>وام رسالت</td><td>۱۴۰۵/۰۶/۲۰</td><td>۲٬۴۰۰٬۰۰۰</td><td>۲٬۴۰۰٬۰۰۰</td><td>۰</td><td><span class="badge">پرداخت‌شده</span></td></tr></tbody></table></div><p class="empty-note">در نسخهٔ اصلی، «ماه پرداخت» از تاریخ پرداخت ساخته می‌شود و هر پرداخت جزئی نیز قابل ثبت است.</p></div></section>
+        <section id="reports" class="page"><div class="topbar"><div><h1>گزارش‌ها</h1><p class="subtle">گزارش‌ها بر اساس پرداخت واقعی و سررسید برنامه‌ریزی‌شده تفکیک می‌شوند.</p></div></div><div class="grid"><article class="card metric"><span class="subtle">هزینه به تفکیک دسته</span><b>خوراک</b><span>۲۶٪ از هزینه‌های ماه</span></article><article class="card metric"><span class="subtle">بیشترین تعهد ماه بعد</span><b>وام سپه</b><span>۱٬۸۰۰٬۰۰۰ تومان</span></article><article class="card metric"><span class="subtle">پس‌انداز ماه</span><b>۱۷٬۷۰۰٬۰۰۰ تومان</b><span class="up">۴۲٪ از درآمد</span></article><article class="card metric"><span class="subtle">انضباط پرداخت</span><b>۹۴٪</b><span>پرداخت به‌موقع</span></article></div></section>
+        <section id="roadmap" class="page"><div class="topbar"><div><h1>فازبندی اجرا</h1><p class="subtle">این نمونه فقط تجربهٔ کاربری را نشان می‌دهد؛ دادهٔ واقعی هنوز ذخیره نمی‌شود.</p></div></div><article class="card"><div class="phase"><h3>فاز ۱ — پایه و مهاجرت</h3><p>مدل داده، SQLite محلی، ورود امن داده‌های اکسل، تعهدات، سررسیدها و پرداخت‌ها.</p></div><div class="phase"><h3>فاز ۲ — ثبت روزانه و بودجه</h3><p>فرم درآمد/هزینه، دسته‌بندی، حساب‌ها، بودجهٔ ماهانه و ماندهٔ قابل خرج.</p></div><div class="phase"><h3>فاز ۳ — داشبورد و گزارش</h3><p>گزارش ماهانه، روند هزینه، هشدار سررسید و خروجی اکسل/CSV.</p></div><div class="phase"><h3>فاز ۴ — پایداری و تجربهٔ نهایی</h3><p>پشتیبان‌گیری، بازیابی، قفل محلی، تست و بستهٔ نصب/اجرای ساده.</p></div></article></section>
+      </main>
+    </div>
+    <dialog id="transactionDialog"><form method="dialog" class="dialog-content" id="transactionForm"><div class="dialog-head"><h2>ثبت تراکنش</h2><button class="close" value="cancel" aria-label="بستن">×</button></div><div class="form-row"><div class="field"><label>نوع</label><select id="transactionType"><option>هزینه</option><option>درآمد</option></select></div><div class="field"><label>مبلغ (تومان)</label><input id="transactionAmount" type="number" placeholder="مثلاً 250000" required /></div><div class="field"><label>تاریخ</label><input id="transactionDate" value="۱۴۰۵/۰۶/۲۸" required /></div></div><div class="form-row"><div class="field"><label>دسته</label><select id="transactionCategory"><option>خوراک</option><option>خانه</option><option>حمل‌ونقل</option><option>درآمد شغلی</option></select></div><div class="field"><label>حساب</label><select><option>حساب اصلی</option><option>کارت بانکی</option><option>نقدی</option></select></div><div class="field"><label>شرح</label><input id="transactionNote" placeholder="مثلاً خرید سوپرمارکت" required /></div></div><div class="form-actions"><button class="primary" value="save">ذخیرهٔ تراکنش</button><button class="secondary" value="cancel">انصراف</button></div></form></dialog>
+    <dialog id="commitmentDialog"><form method="dialog" class="dialog-content"><div class="dialog-head"><h2>تعهد جدید</h2><button class="close" value="cancel" aria-label="بستن">×</button></div><div class="form-row"><div class="field"><label>عنوان تعهد</label><input placeholder="مثلاً وام بانک ..." required /></div><div class="field"><label>نوع</label><select><option>وام</option><option>هزینهٔ ثابت</option><option>چک</option><option>بدهی</option></select></div><div class="field"><label>مبلغ کل</label><input type="number" placeholder="تومان" /></div></div><div class="form-row"><div class="field"><label>مبلغ هر سررسید</label><input type="number" placeholder="تومان" required /></div><div class="field"><label>اولین سررسید</label><input placeholder="۱۴۰۵/۰۷/۰۵" required /></div><div class="field"><label>تعداد اقساط</label><input type="number" placeholder="۱۲" /></div></div><div class="form-actions"><button class="primary" value="save">ایجاد برنامهٔ پرداخت</button><button class="secondary" value="cancel">انصراف</button></div></form></dialog>
+    <dialog id="paymentDialog"><form method="dialog" class="dialog-content"><div class="dialog-head"><h2>ثبت پرداخت تعهد</h2><button class="close" value="cancel" aria-label="بستن">×</button></div><div class="form-row"><div class="field"><label>سررسید مربوطه</label><select><option>وام سپه — ۱۴۰۵/۰۶/۳۱</option><option>هزینهٔ مدرسه — ۱۴۰۵/۰۶/۲۴</option><option>اینترنت منزل — ۱۴۰۵/۰۷/۰۵</option></select></div><div class="field"><label>مبلغ پرداخت‌شده</label><input type="number" placeholder="تومان" required /></div><div class="field"><label>تاریخ پرداخت</label><input value="۱۴۰۵/۰۶/۲۸" required /></div></div><div class="form-row"><div class="field"><label>حساب پرداخت</label><select><option>حساب اصلی</option><option>کارت بانکی</option><option>نقدی</option></select></div><div class="field"><label>یادداشت</label><input placeholder="اختیاری" /></div></div><div class="form-actions"><button class="primary" value="save">ثبت پرداخت</button><button class="secondary" value="cancel">انصراف</button></div></form></dialog>
+    <script>
+      const pages = [...document.querySelectorAll('.page')];
+      const nav = [...document.querySelectorAll('[data-view]')];
+      function showView(id) { pages.forEach(p => p.classList.toggle('active', p.id === id)); nav.forEach(b => b.classList.toggle('active', b.dataset.view === id)); window.scrollTo({top:0, behavior:'smooth'}); }
+      nav.forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
+      document.querySelectorAll('[data-view-link]').forEach(button => button.addEventListener('click', () => showView(button.dataset.viewLink)));
+      document.querySelectorAll('[data-open]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.open).showModal()));
+      document.getElementById('transactionForm').addEventListener('submit', event => {
+        if (event.submitter.value !== 'save') return;
+        const type = document.getElementById('transactionType').value;
+        const amount = Number(document.getElementById('transactionAmount').value).toLocaleString('fa-IR');
+        const date = document.getElementById('transactionDate').value;
+        const note = document.getElementById('transactionNote').value;
+        const category = document.getElementById('transactionCategory').value;
+        document.getElementById('transactionRows').insertAdjacentHTML('afterbegin', `<tr><td>${date}</td><td>${note}</td><td>${category}</td><td><span class="badge ${type === 'هزینه' ? 'warning' : ''}">${type}</span></td><td>${amount}</td><td>حساب اصلی</td></tr>`);
+        setTimeout(() => showView('transactions'), 0);
+      });
+    </script>
+  </body>
+</html>
