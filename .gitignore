@@ -18,5 +18,7 @@ build-rial/
 release-rial/
 build-settings/
 release-next/
+build-grid/
+release-grid/
 *.spec
 .pytest_cache/
