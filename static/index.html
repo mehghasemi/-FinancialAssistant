@@ -13,10 +13,12 @@
         <nav>
           <button class="nav-link active" data-page="dashboard">داشبورد</button>
           <button class="nav-link" data-page="transactions">درآمد و هزینه</button>
-          <button class="nav-link" data-page="commitments">تعهدات مالی</button>
+          <button class="nav-link" data-page="commitmentDefinition">تعریف تعهد</button>
+          <button class="nav-link" data-page="commitments">مدیریت تعهدات</button>
+          <button class="nav-link" data-page="settings">تنظیمات</button>
+          <button class="nav-link" data-page="help">راهنمای سیستم</button>
           <button class="nav-link" data-page="releases">تاریخچهٔ تغییرات</button>
         </nav>
-        <p class="local-note">داده‌ها در دیتابیس SQLite روی همین دستگاه نگهداری می‌شوند.<br>نگارش ۰.۳.۰</p>
       </aside>
       <main>
         <section id="dashboard" class="page active">
@@ -40,7 +42,7 @@
             <form id="transactionForm" class="panel form-panel">
               <h2>تراکنش جدید</h2>
               <div class="field"><label for="transactionType">نوع</label><select id="transactionType"><option value="expense">هزینه</option><option value="income">درآمد</option></select></div>
-              <div class="field"><label for="transactionAmount">مبلغ (تومان)</label><input id="transactionAmount" type="number" min="1" required /></div>
+              <div class="field"><label for="transactionAmount">مبلغ (تومان)</label><input id="transactionAmount" data-amount inputmode="numeric" required /></div>
               <div class="field"><label for="transactionDate">تاریخ شمسی</label><input id="transactionDate" inputmode="numeric" placeholder="۱۴۰۵/۰۶/۲۸" required /></div>
               <div class="field"><label for="transactionCategory">دسته‌بندی</label><select id="transactionCategory" required></select></div>
               <div class="field"><label for="transactionAccount">حساب</label><select id="transactionAccount"></select></div>
@@ -52,23 +54,39 @@
           </div>
         </section>
 
-        <section id="commitments" class="page">
-          <header><div><h1>تعهدات مالی</h1><p>تعهد، سررسید و پرداخت واقعی، رکوردهای جداگانه‌اند.</p></div></header>
-          <div class="columns form-columns">
+        <section id="commitmentDefinition" class="page">
+          <header><div><h1>تعریف تعهد مالی</h1><p>اطلاعات کلی را یک‌بار وارد کنید؛ اقساط پیش از ثبت نهایی برای تأیید شما ساخته می‌شوند.</p></div></header>
+          <div class="columns definition-columns">
             <form id="commitmentForm" class="panel form-panel">
-              <h2>تعهد جدید</h2>
-              <div class="field"><label for="commitmentTitle">عنوان</label><input id="commitmentTitle" placeholder="مثلاً وام بانک ..." required /></div>
+              <h2>اطلاعات تعهد جدید</h2>
+              <div class="field"><label for="commitmentTitle">عنوان تعهد</label><input id="commitmentTitle" placeholder="مثلاً وام بانک رسالت" required /></div>
               <div class="field"><label for="commitmentKind">نوع</label><select id="commitmentKind"><option>وام</option><option>هزینهٔ ثابت</option><option>چک</option><option>بدهی</option></select></div>
-              <div class="field"><label for="commitmentTotal">مبلغ کل (اختیاری)</label><input id="commitmentTotal" type="number" min="1" /></div>
-              <div class="field"><label for="installmentAmount">مبلغ هر سررسید</label><input id="installmentAmount" type="number" min="1" required /></div>
-              <div class="field"><label for="firstDueDate">اولین سررسید شمسی</label><input id="firstDueDate" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۰۱" required /></div>
-              <div class="field"><label for="installmentCount">تعداد سررسید</label><input id="installmentCount" type="number" min="1" value="12" required /></div>
-              <details class="help"><summary>؟ راهنمای تعهد</summary><p>برای هر تعهد، برنامه سررسیدها از تاریخ نخست و تعداد سررسید ساخته می‌شود. پرداخت‌های بعدی به هر سررسید متصل می‌شوند.</p></details>
-              <button class="primary" type="submit">ایجاد برنامهٔ پرداخت</button><p class="form-message" id="commitmentMessage" role="status" aria-live="polite"></p>
+              <div class="field"><label for="commitmentTotal">مبلغ کل</label><input id="commitmentTotal" data-amount inputmode="numeric" placeholder="مثلاً ۱۰۰٬۰۰۰٬۰۰۰" /></div>
+              <div class="field"><label for="installmentAmount">مبلغ هر قسط</label><input id="installmentAmount" data-amount inputmode="numeric" required /></div>
+              <div class="field"><label for="installmentCount">تعداد اقساط</label><input id="installmentCount" type="number" min="1" value="12" required /></div>
+              <div class="field"><label for="firstDueDate">تاریخ اولین قسط (شمسی)</label><input id="firstDueDate" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۰۱" required /></div>
+              <div class="field"><label for="intervalMonths">دورهٔ پرداخت (ماه)</label><input id="intervalMonths" type="number" min="1" max="12" value="1" required /></div>
+              <div class="field"><label for="lastDueDate">تاریخ پایان (محاسبه‌شده)</label><input id="lastDueDate" readonly placeholder="پس از پیش‌نمایش نمایش داده می‌شود" /></div>
+              <details class="help"><summary>؟ راهنما</summary><p>مثلاً برای وام ۱۰ قسطه، تعداد را ۱۰ و دوره را ۱ ماه وارد کنید. ابتدا پیش‌نمایش را بررسی و سپس ثبت نهایی را تأیید کنید.</p></details>
+              <button class="quiet" id="previewCommitment" type="button">نمایش پیش‌نمایش اقساط</button>
+              <button class="primary" id="saveCommitment" type="submit" disabled>تأیید و ثبت تعهد</button><p class="form-message" id="commitmentMessage" role="status" aria-live="polite"></p>
             </form>
-            <article class="panel"><div class="panel-title"><h2>سررسیدها</h2><label class="month-filter">ماه شمسی <select id="installmentMonth"></select></label></div><div class="table-wrap"><table><thead><tr><th>عنوان</th><th>سررسید</th><th>مبلغ</th><th>پرداخت</th><th>مانده</th><th>وضعیت</th></tr></thead><tbody id="installmentRows"></tbody></table></div></article>
+            <article class="panel"><div class="panel-title"><h2>پیش‌نمایش اقساط</h2><span id="previewSummary">ابتدا اطلاعات را وارد کنید.</span></div><div class="table-wrap"><table><thead><tr><th>شماره</th><th>سررسید شمسی</th><th>مبلغ قسط</th></tr></thead><tbody id="previewRows"><tr><td colspan="3" class="empty-cell">پیش‌نمایشی ایجاد نشده است.</td></tr></tbody></table></div></article>
           </div>
-          <article class="panel payment-panel"><form id="paymentForm"><div class="panel-title"><h2>ثبت پرداخت سررسید</h2><span>پرداخت جزئی نیز پشتیبانی می‌شود.</span></div><details class="help"><summary>؟ راهنمای پرداخت</summary><p>مبلغ ثبت‌شده نباید از ماندهٔ همان سررسید بیشتر باشد. یک پرداخت می‌تواند بخشی از مبلغ سررسید باشد.</p></details><div class="payment-fields"><div class="field"><label for="paymentInstallment">سررسید</label><select id="paymentInstallment" required></select></div><div class="field"><label for="paymentAmount">مبلغ پرداخت</label><input id="paymentAmount" type="number" min="1" required /></div><div class="field"><label for="paymentDate">تاریخ پرداخت شمسی</label><input id="paymentDate" inputmode="numeric" placeholder="۱۴۰۵/۰۶/۲۸" required /></div><div class="field"><label for="paymentAccount">حساب</label><select id="paymentAccount"></select></div><button class="primary" type="submit">ثبت پرداخت</button></div><p class="form-message" id="paymentMessage" role="status" aria-live="polite"></p></form></article>
+        </section>
+
+        <section id="commitments" class="page">
+          <header><div><h1>نمایش و مدیریت تعهدات</h1><p>اقساط را فیلتر کنید و پرداخت همان ردیف را مستقیماً در گرید ثبت کنید.</p></div><button class="primary" data-page="commitmentDefinition">تعریف تعهد جدید</button></header>
+          <article class="panel commitment-grid-panel"><div class="panel-title"><h2>فهرست تعهدات</h2><span>ویرایش کلی هر تعهد از همان ردیف</span></div><div class="table-wrap"><table><thead><tr><th>عنوان</th><th>نوع</th><th>مبلغ کل</th><th>تعداد اقساط</th><th>جمع اقساط</th><th>پرداخت‌شده</th><th>عملیات</th></tr></thead><tbody id="commitmentRows"></tbody></table></div></article>
+          <article class="panel"><div class="grid-filters"><div class="field"><label for="installmentMonth">ماه سررسید</label><select id="installmentMonth"></select></div><div class="field"><label for="installmentStatus">وضعیت</label><select id="installmentStatus"><option value="">همهٔ وضعیت‌ها</option></select></div><div class="field"><label for="installmentCommitment">تعهد</label><select id="installmentCommitment"><option value="">همهٔ تعهدات</option></select></div><div class="field"><label for="installmentSearch">جست‌وجوی عنوان</label><input id="installmentSearch" maxlength="120" placeholder="مثلاً رسالت" /></div><button class="quiet" id="clearInstallmentFilters" type="button">پاک‌کردن فیلترها</button></div><div class="table-wrap"><table><thead><tr><th>تعهد</th><th>سررسید</th><th>مبلغ</th><th>پرداخت</th><th>مانده</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody id="installmentRows"></tbody></table></div></article>
+        </section>
+        <section id="settings" class="page">
+          <header><div><h1>تنظیمات سیستم</h1><p>محل و رفتار پشتیبان‌گیری دیتابیس را تعیین کنید.</p></div></header>
+          <article class="panel settings-panel"><form id="settingsForm" class="form-panel"><h2>پشتیبان‌گیری</h2><label class="toggle-field"><input id="backupEnabled" type="checkbox" /> تهیهٔ پشتیبان خودکار هنگام خروج از برنامه</label><div class="field"><label for="backupDirectory">مسیر ذخیرهٔ پشتیبان‌ها</label><input id="backupDirectory" maxlength="500" required /></div><div class="settings-actions"><button class="primary" type="submit">ذخیرهٔ تنظیمات</button><button class="quiet" id="manualBackup" type="button">تهیهٔ پشتیبان اکنون</button></div><p class="form-message" id="settingsMessage" role="status" aria-live="polite"></p></form></article>
+        </section>
+        <section id="help" class="page">
+          <header><div><h1>راهنمای سیستم</h1><p>نکات کوتاه برای استفاده و نگهداری از اطلاعات مالی</p></div></header>
+          <article class="panel"><h2>محل نگهداری اطلاعات</h2><p class="help-text">داده‌های مالی در دیتابیس SQLite روی همین دستگاه نگهداری می‌شوند و به سرور یا فضای ابری ارسال نمی‌شوند.</p></article>
         </section>
         <section id="releases" class="page"><header><div><h1>تاریخچهٔ تغییرات</h1><p>تغییرات ثبت‌شدهٔ برنامه از جدیدترین به قدیمی‌ترین</p></div></header><details class="help"><summary>؟ راهنمای تاریخچه</summary><p>هر نگارش، زمان انتشار، شرح و بخش‌های تحت تأثیر را نشان می‌دهد. تاریخچهٔ موجود حذف یا بازنویسی نمی‌شود.</p></details><div id="releaseList" class="release-list" aria-live="polite"></div></section>
       </main>

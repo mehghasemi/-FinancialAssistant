@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime
 import os
 from pathlib import Path
 import sys
@@ -23,6 +24,21 @@ def write_audit_log(db: sqlite3.Connection, action: str, resource_type: str, res
            VALUES (?, ?, ?, ?)""",
         (action, resource_type, resource_id, details),
     )
+
+
+def create_database_backup(destination: str | Path) -> Path:
+    backup_dir = Path(destination).expanduser().resolve()
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup_path = backup_dir / f"financial_assistant_backup_{timestamp}.db"
+    source = sqlite3.connect(DATABASE_PATH)
+    target = sqlite3.connect(backup_path)
+    try:
+        source.backup(target)
+    finally:
+        target.close()
+        source.close()
+    return backup_path
 
 
 @contextmanager
@@ -113,6 +129,17 @@ def initialize_database() -> None:
                 affected_areas TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS data_migrations (
+                migration_key TEXT PRIMARY KEY,
+                applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS app_settings (
+                setting_key TEXT PRIMARY KEY,
+                setting_value TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS import_runs (
                 id INTEGER PRIMARY KEY,
                 source_name TEXT NOT NULL,
@@ -179,6 +206,14 @@ def initialize_database() -> None:
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_source_key "
             "ON transactions(source_key) WHERE source_key IS NOT NULL"
         )
+        _apply_rial_to_toman_migration(db)
+        db.execute(
+            "INSERT OR IGNORE INTO app_settings(setting_key, setting_value) VALUES ('backup_enabled', 'true')"
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO app_settings(setting_key, setting_value) VALUES ('backup_directory', ?)",
+            (str(DATA_DIR / "backups"),),
+        )
 
         accounts = ("حساب اصلی", "کارت بانکی", "نقدی")
         db.executemany("INSERT OR IGNORE INTO accounts(name) VALUES (?)", ((name,) for name in accounts))
@@ -210,6 +245,42 @@ def initialize_database() -> None:
         )
         db.execute(
             """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
+               VALUES ('0.4.1', '2026-09-19T00:00:00+03:30', 'راهنمای سیستم',
+                       'انتقال توضیح محل نگهداری داده‌ها از نوار کناری به صفحهٔ راهنمای سیستم.',
+                       'رابط کاربری و راهنما')"""
+        )
+        db.execute(
+            """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
+               VALUES ('0.5.0', '2026-09-19T00:00:00+03:30', 'مدیریت تعهدات و اقساط',
+                       'تعریف یکجای تعهد، پیش‌نمایش اقساط، فیلتر گرید و ثبت پرداخت از همان ردیف.',
+                       'تعهدات مالی، اقساط و پرداخت‌ها')"""
+        )
+        db.execute(
+            """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
+               VALUES ('0.5.1', '2026-09-19T00:00:00+03:30', 'فیلتر یکتای تعهدات',
+                       'نمایش هر ترکیب عنوان و مبلغ کل فقط یک‌بار در فیلتر تعهدات.',
+                       'فیلتر اقساط')"""
+        )
+        db.execute(
+            """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
+               VALUES ('0.5.2', '2026-09-19T00:00:00+03:30', 'تبدیل ریال به تومان',
+                       'تبدیل یک‌بارهٔ مبالغ عملیاتی و نمایش جداکنندهٔ هزارگان.',
+                       'مبالغ، فیلتر تعهدات و رابط کاربری')"""
+        )
+        db.execute(
+            """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
+               VALUES ('0.6.0', '2026-09-19T00:00:00+03:30', 'پشتیبان‌گیری و ویرایش تعهدات',
+                       'تنظیمات پشتیبان‌گیری، فیلتر وضعیت هوشمند و ویرایش کلی و جزئی تعهدات.',
+                       'تنظیمات، پشتیبان‌گیری، تعهدات و اقساط')"""
+        )
+        db.execute(
+            """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
+               VALUES ('0.6.1', '2026-09-19T00:00:00+03:30', 'گرید تعهدات',
+                       'افزودن فهرست مستقل تعهدات و ویرایش کلی هر تعهد در همان گرید.',
+                       'مدیریت تعهدات')"""
+        )
+        db.execute(
+            """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
                VALUES ('0.3.0', '2026-09-19T00:00:00+03:30', 'تقویم شمسی',
                        'ورود، نمایش و فیلتر تاریخ‌ها با تقویم جلالی و نام ماه‌های فارسی.',
                        'رابط کاربری، API، گزارش‌ها و مستندات')"""
@@ -221,3 +292,33 @@ def _ensure_column(db: sqlite3.Connection, table: str, definition: str) -> None:
     columns = {row["name"] for row in db.execute(f"PRAGMA table_info({table})")}
     if column_name not in columns:
         db.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")
+
+
+def _apply_rial_to_toman_migration(db: sqlite3.Connection) -> None:
+    migration_key = "rial_amounts_to_toman_20260919"
+    if db.execute("SELECT 1 FROM data_migrations WHERE migration_key = ?", (migration_key,)).fetchone():
+        return
+    for table, column in (
+        ("transactions", "amount"),
+        ("commitments", "total_amount"),
+        ("installments", "amount"),
+        ("payments", "amount"),
+        ("budget_items", "amount"),
+    ):
+        db.execute(f"UPDATE {table} SET {column} = CAST({column} / 10 AS INTEGER) WHERE {column} IS NOT NULL")
+    db.execute("INSERT INTO data_migrations(migration_key) VALUES (?)", (migration_key,))
+
+
+def get_setting(key: str, default: str = "") -> str:
+    with connection() as db:
+        row = db.execute("SELECT setting_value FROM app_settings WHERE setting_key = ?", (key,)).fetchone()
+    return row["setting_value"] if row else default
+
+
+def set_setting(key: str, value: str) -> None:
+    with connection() as db:
+        db.execute(
+            """INSERT INTO app_settings(setting_key, setting_value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = CURRENT_TIMESTAMP""",
+            (key, value),
+        )

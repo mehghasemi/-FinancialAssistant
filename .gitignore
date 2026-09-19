@@ -9,5 +9,14 @@ build-release/
 build-shamsi/
 build-import/
 build-import-2/
+build-help/
+build-commitments/
+build-commitments-final/
+build-filter/
+release-build/
+build-rial/
+release-rial/
+build-settings/
+release-next/
 *.spec
 .pytest_cache/

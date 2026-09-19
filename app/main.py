@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import calendar
 import logging
 import uuid
 from datetime import date, datetime
+from pathlib import Path
 from typing import Literal
 
 import jdatetime
@@ -16,7 +16,10 @@ from pydantic import BaseModel, Field, field_validator
 
 from .calendar import format_jalali_date, format_jalali_datetime, jalali_month_bounds, jalali_month_label, parse_jalali_date
 from .config import APP_NAME, APP_VERSION, LOCAL_HOSTS, MAX_PAGE_SIZE
-from .database import RESOURCE_DIR, connection, initialize_database, write_audit_log
+from .database import (
+    RESOURCE_DIR, connection, create_database_backup, get_setting,
+    initialize_database, set_setting, write_audit_log,
+)
 
 
 logging.basicConfig(level=logging.INFO)
@@ -99,23 +102,68 @@ class PaymentInput(BaseModel):
         return parse_jalali_date(value)
 
 
+class CommitmentUpdate(BaseModel):
+    title: str = Field(min_length=2, max_length=120)
+    kind: str = Field(min_length=2, max_length=50)
+    total_amount: int | None = Field(default=None, gt=0)
+
+    @field_validator("title", "kind")
+    @classmethod
+    def normalize_required_text(cls, value: str) -> str:
+        return normalize_text(value)
+
+
+class InstallmentUpdate(BaseModel):
+    due_date: date
+    amount: int = Field(gt=0)
+    note: str = Field(default="", max_length=300)
+
+    @field_validator("due_date", mode="before")
+    @classmethod
+    def parse_due_date(cls, value):
+        return parse_jalali_date(value)
+
+    @field_validator("note")
+    @classmethod
+    def normalize_note(cls, value: str) -> str:
+        return normalize_text(value)
+
+
+class SettingsInput(BaseModel):
+    backup_enabled: bool = True
+    backup_directory: str = Field(min_length=1, max_length=500)
+
+    @field_validator("backup_directory")
+    @classmethod
+    def normalize_backup_directory(cls, value: str) -> str:
+        return str(Path(value).expanduser())
+
+
 def serialize(row):
     return dict(row)
 
 
 def add_months(value: date, months: int) -> date:
-    month_index = value.month - 1 + months
-    year = value.year + month_index // 12
+    jalali_value = jdatetime.date.fromgregorian(date=value)
+    month_index = jalali_value.month - 1 + months
+    year = jalali_value.year + month_index // 12
     month = month_index % 12 + 1
-    day = min(value.day, calendar.monthrange(year, month)[1])
-    return date(year, month, day)
+    maximum_day = 31 if month <= 6 else 30 if month <= 11 else 30 if jdatetime.date(year, 12, 1).isleap() else 29
+    return jdatetime.date(year, month, min(jalali_value.day, maximum_day)).togregorian()
+
+
+def planned_installments(payload: CommitmentInput) -> list[date]:
+    return [
+        add_months(payload.first_due_date, index * payload.interval_months)
+        for index in range(payload.installment_count)
+    ]
 
 
 def installment_rows(where: str = "", params: tuple = ()) -> list[dict]:
     query = f"""
         SELECT
             i.id, i.due_date, i.amount, i.note, c.id AS commitment_id,
-            c.title, c.kind,
+            c.title, c.kind, c.total_amount,
             COALESCE(SUM(p.amount), 0) AS paid_amount,
             i.amount - COALESCE(SUM(p.amount), 0) AS remaining_amount
         FROM installments i
@@ -147,6 +195,16 @@ def startup() -> None:
     initialize_database()
 
 
+@app.on_event("shutdown")
+def shutdown() -> None:
+    if get_setting("backup_enabled", "true") != "true":
+        return
+    try:
+        create_database_backup(get_setting("backup_directory", ""))
+    except Exception:
+        logger.exception("Automatic database backup failed during shutdown")
+
+
 @app.exception_handler(Exception)
 async def unexpected_error_handler(request: Request, error: Exception):
     error_id = uuid.uuid4().hex[:10]
@@ -170,6 +228,27 @@ async def validation_error_handler(request: Request, error: RequestValidationErr
 @app.get("/api/health")
 def health():
     return {"status": "ok", "database": "sqlite", "version": APP_VERSION}
+
+
+@app.get("/api/settings")
+def settings():
+    return {
+        "backup_enabled": get_setting("backup_enabled", "true") == "true",
+        "backup_directory": get_setting("backup_directory", ""),
+    }
+
+
+@app.put("/api/settings")
+def update_settings(payload: SettingsInput):
+    set_setting("backup_enabled", "true" if payload.backup_enabled else "false")
+    set_setting("backup_directory", payload.backup_directory)
+    return settings()
+
+
+@app.post("/api/backups", status_code=201)
+def create_backup():
+    backup_path = create_database_backup(get_setting("backup_directory", ""))
+    return {"path": str(backup_path)}
 
 
 @app.get("/api/releases")
@@ -246,7 +325,7 @@ def transactions(month: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}$
 
 @app.post("/api/commitments", status_code=201)
 def create_commitment(payload: CommitmentInput):
-    due_dates = [add_months(payload.first_due_date, index * payload.interval_months) for index in range(payload.installment_count)]
+    due_dates = planned_installments(payload)
     planned_total = payload.installment_amount * payload.installment_count
     if payload.total_amount and planned_total > payload.total_amount:
         raise HTTPException(422, "جمع اقساط نمی‌تواند بیشتر از مبلغ کل باشد.")
@@ -264,17 +343,132 @@ def create_commitment(payload: CommitmentInput):
     return {"id": commitment_id, "installment_count": payload.installment_count}
 
 
+@app.post("/api/commitments/preview")
+def preview_commitment(payload: CommitmentInput):
+    due_dates = planned_installments(payload)
+    planned_total = payload.installment_amount * payload.installment_count
+    if payload.total_amount and planned_total > payload.total_amount:
+        raise HTTPException(422, "جمع اقساط نمی‌تواند بیشتر از مبلغ کل باشد.")
+    return {
+        "planned_total": planned_total,
+        "first_due_date": format_jalali_date(due_dates[0]),
+        "last_due_date": format_jalali_date(due_dates[-1]),
+        "installments": [
+            {"number": index + 1, "due_date": format_jalali_date(due), "amount": payload.installment_amount}
+            for index, due in enumerate(due_dates)
+        ],
+    }
+
+
+@app.get("/api/commitments")
+def commitment_list():
+    with connection() as db:
+        return [
+            serialize(row)
+            for row in db.execute(
+                """SELECT c.id, c.title, c.kind, c.total_amount, COUNT(i.id) AS installment_count,
+                          COALESCE(SUM(i.amount), 0) AS planned_amount,
+                          COALESCE(SUM(p.payment_amount), 0) AS paid_amount
+                   FROM commitments c
+                   LEFT JOIN installments i ON i.commitment_id = c.id
+                   LEFT JOIN (
+                       SELECT installment_id, SUM(amount) AS payment_amount
+                       FROM payments GROUP BY installment_id
+                   ) p ON p.installment_id = i.id
+                   GROUP BY c.id
+                   ORDER BY c.id DESC"""
+            ).fetchall()
+        ]
+
+
+@app.patch("/api/commitments/{commitment_id}")
+def update_commitment(commitment_id: int, payload: CommitmentUpdate):
+    with connection() as db:
+        existing = db.execute("SELECT id FROM commitments WHERE id = ?", (commitment_id,)).fetchone()
+        if not existing:
+            raise HTTPException(404, "تعهد پیدا نشد.")
+        planned_amount = db.execute(
+            "SELECT COALESCE(SUM(amount), 0) AS total FROM installments WHERE commitment_id = ?", (commitment_id,)
+        ).fetchone()["total"]
+        if payload.total_amount and payload.total_amount < planned_amount:
+            raise HTTPException(422, "مبلغ کل نمی‌تواند کمتر از جمع اقساط باشد.")
+        db.execute(
+            "UPDATE commitments SET title = ?, kind = ?, total_amount = ? WHERE id = ?",
+            (payload.title, payload.kind, payload.total_amount, commitment_id),
+        )
+        write_audit_log(db, "update", "commitment", commitment_id, "general details")
+    return {"id": commitment_id}
+
+
+@app.get("/api/commitment-filters")
+def commitment_filters():
+    with connection() as db:
+        return [
+            serialize(row)
+            for row in db.execute(
+                """SELECT c.title, c.total_amount, COUNT(DISTINCT c.id) AS commitment_count,
+                          COUNT(i.id) AS installment_count
+                   FROM commitments c
+                   LEFT JOIN installments i ON i.commitment_id = c.id
+                   GROUP BY c.title, c.total_amount
+                   ORDER BY c.title, c.total_amount"""
+            ).fetchall()
+        ]
+
+
 @app.get("/api/installments")
-def installments(month: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}$"), status: str | None = None):
-    where, params = "", []
+def installments(
+    month: str | None = None,
+    status: Literal["paid", "partial", "overdue", "unpaid"] | None = None,
+    commitment_id: int | None = None,
+    commitment_title: str | None = None,
+    commitment_total: int | None = None,
+    commitment_total_missing: bool = False,
+    search: str | None = None,
+):
+    clauses, params = [], []
     if month:
         start, end = month_bounds_or_error(month)
-        where = "WHERE i.due_date >= ? AND i.due_date < ?"
+        clauses.append("i.due_date >= ? AND i.due_date < ?")
         params.extend((start, end))
+    if commitment_id:
+        clauses.append("i.commitment_id = ?")
+        params.append(commitment_id)
+    if commitment_title and normalize_text(commitment_title):
+        clauses.append("c.title = ?")
+        params.append(normalize_text(commitment_title))
+        if commitment_total_missing:
+            clauses.append("c.total_amount IS NULL")
+        elif commitment_total is not None:
+            clauses.append("c.total_amount = ?")
+            params.append(commitment_total)
+    if search and normalize_text(search):
+        clauses.append("c.title LIKE ?")
+        params.append(f"%{normalize_text(search)}%")
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     result = installment_rows(where, tuple(params))
     if status:
         result = [item for item in result if item["status"] == status]
     return result
+
+
+@app.patch("/api/installments/{installment_id}")
+def update_installment(installment_id: int, payload: InstallmentUpdate):
+    with connection() as db:
+        existing = db.execute("SELECT id FROM installments WHERE id = ?", (installment_id,)).fetchone()
+        if not existing:
+            raise HTTPException(404, "قسط پیدا نشد.")
+        paid_amount = db.execute(
+            "SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE installment_id = ?", (installment_id,)
+        ).fetchone()["total"]
+        if payload.amount < paid_amount:
+            raise HTTPException(422, "مبلغ قسط نمی‌تواند کمتر از پرداخت‌های ثبت‌شده باشد.")
+        db.execute(
+            "UPDATE installments SET due_date = ?, amount = ?, note = ? WHERE id = ?",
+            (payload.due_date.isoformat(), payload.amount, payload.note, installment_id),
+        )
+        write_audit_log(db, "update", "installment", installment_id, "individual details")
+    return {"id": installment_id}
 
 
 @app.post("/api/payments", status_code=201)
