@@ -1,3 +1,4 @@
 fastapi==0.141.1
 jdatetime==6.1.0
+openpyxl==3.1.5
 uvicorn==0.53.0

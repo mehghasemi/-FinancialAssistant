@@ -7,5 +7,7 @@ dist/
 release/
 build-release/
 build-shamsi/
+build-import/
+build-import-2/
 *.spec
 .pytest_cache/

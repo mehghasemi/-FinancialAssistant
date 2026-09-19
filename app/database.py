@@ -113,11 +113,71 @@ def initialize_database() -> None:
                 affected_areas TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS import_runs (
+                id INTEGER PRIMARY KEY,
+                source_name TEXT NOT NULL,
+                source_path TEXT NOT NULL,
+                workbook_hash TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
+                total_rows INTEGER NOT NULL DEFAULT 0,
+                mapped_commitments INTEGER NOT NULL DEFAULT 0,
+                mapped_installments INTEGER NOT NULL DEFAULT 0,
+                mapped_payments INTEGER NOT NULL DEFAULT 0,
+                mapped_budget_items INTEGER NOT NULL DEFAULT 0,
+                imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                completed_at TEXT,
+                error_message TEXT NOT NULL DEFAULT ''
+            );
+
+            CREATE TABLE IF NOT EXISTS imported_rows (
+                id INTEGER PRIMARY KEY,
+                import_id INTEGER NOT NULL REFERENCES import_runs(id) ON DELETE CASCADE,
+                sheet_name TEXT NOT NULL,
+                source_row INTEGER NOT NULL,
+                record_type TEXT NOT NULL DEFAULT 'raw',
+                data_json TEXT NOT NULL,
+                UNIQUE(import_id, sheet_name, source_row)
+            );
+
+            CREATE TABLE IF NOT EXISTS budget_items (
+                id INTEGER PRIMARY KEY,
+                fiscal_year INTEGER NOT NULL,
+                category_name TEXT NOT NULL,
+                jalali_month INTEGER NOT NULL CHECK (jalali_month BETWEEN 1 AND 12),
+                amount INTEGER NOT NULL CHECK (amount >= 0),
+                import_id INTEGER REFERENCES import_runs(id) ON DELETE SET NULL,
+                source_key TEXT UNIQUE,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE INDEX IF NOT EXISTS idx_transactions_occurred_on ON transactions(occurred_on);
             CREATE INDEX IF NOT EXISTS idx_installments_due_date ON installments(due_date);
             CREATE INDEX IF NOT EXISTS idx_payments_paid_on ON payments(paid_on);
             CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_imported_rows_import_sheet ON imported_rows(import_id, sheet_name);
+            CREATE INDEX IF NOT EXISTS idx_budget_items_year_month ON budget_items(fiscal_year, jalali_month);
             """
+        )
+
+        _ensure_column(db, "commitments", "source_key TEXT")
+        _ensure_column(db, "installments", "source_key TEXT")
+        _ensure_column(db, "payments", "source_key TEXT")
+        _ensure_column(db, "transactions", "source_key TEXT")
+        db.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_commitments_source_key "
+            "ON commitments(source_key) WHERE source_key IS NOT NULL"
+        )
+        db.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_installments_source_key "
+            "ON installments(source_key) WHERE source_key IS NOT NULL"
+        )
+        db.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_source_key "
+            "ON payments(source_key) WHERE source_key IS NOT NULL"
+        )
+        db.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_source_key "
+            "ON transactions(source_key) WHERE source_key IS NOT NULL"
         )
 
         accounts = ("حساب اصلی", "کارت بانکی", "نقدی")
@@ -144,7 +204,20 @@ def initialize_database() -> None:
         )
         db.execute(
             """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
+               VALUES ('0.4.0', '2026-09-19T00:00:00+03:30', 'واردسازی اکسل',
+                       'بایگانی کامل ردیف‌های اکسل و تبدیل امن تعهدات مالی و بودجه‌ها به داده‌های عملیاتی.',
+                       'دیتابیس محلی، واردسازی، تعهدات، اقساط و بودجه')"""
+        )
+        db.execute(
+            """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
                VALUES ('0.3.0', '2026-09-19T00:00:00+03:30', 'تقویم شمسی',
                        'ورود، نمایش و فیلتر تاریخ‌ها با تقویم جلالی و نام ماه‌های فارسی.',
                        'رابط کاربری، API، گزارش‌ها و مستندات')"""
         )
+
+
+def _ensure_column(db: sqlite3.Connection, table: str, definition: str) -> None:
+    column_name = definition.split()[0]
+    columns = {row["name"] for row in db.execute(f"PRAGMA table_info({table})")}
+    if column_name not in columns:
+        db.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")
