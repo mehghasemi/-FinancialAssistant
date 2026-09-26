@@ -14,14 +14,14 @@
 
 ## اجرای یک‌کلیکی در ویندوز
 
-پس از ساخت بستهٔ نهایی، روی `dist/FinancialAssistant.exe` دوبار کلیک کنید. برنامه مرورگر پیش‌فرض را باز می‌کند و دیتابیس شخصی را در `%LOCALAPPDATA%/FinancialAssistant/financial_assistant.db` نگه می‌دارد.
+روی `release/FinancialAssistant.exe` دوبار کلیک کنید. برنامه مرورگر پیش‌فرض را باز می‌کند و دیتابیس شخصی را در `%LOCALAPPDATA%/FinancialAssistant/financial_assistant.db` نگه می‌دارد.
 
 ## تصمیم معماری پیشنهادی
 
 - رابط کاربری: HTML/CSS/JavaScript (در فاز بعد قابل انتقال به React + TypeScript)
 - API محلی: FastAPI
 - دیتابیس محلی: SQLite
-- لایهٔ داده: SQLAlchemy و migration نسخه‌دار
+- لایهٔ داده: اتصال مستقیم SQLite و ارتقای تدریجی schema در `app/database.py`
 - اجرا: یک سرویس محلی که فقط روی `localhost` در دسترس است
 
 جداسازی «تعهد»، «سررسید» و «پرداخت» اصل محوری مدل داده است. با این کار پرداختِ جزئی، پرداخت با تأخیر و گزارش‌های برنامه‌ای در برابر واقعی، قابل اتکا می‌شوند.

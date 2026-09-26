@@ -1,0 +1,13 @@
+node_modules/
+venv/
+.venv/
+__pycache__/
+dist/
+build/
+data/
+*.db
+*.sqlite
+*.xlsx
+*.csv
+package-lock.json
+*.log

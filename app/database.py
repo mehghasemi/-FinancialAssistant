@@ -281,6 +281,12 @@ def initialize_database() -> None:
         )
         db.execute(
             """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
+               VALUES ('0.7.0', '2026-09-26T00:00:00+03:30', 'فهرست تجمیعی و ویرایش گروهی',
+                       'نمایش یک‌بارهٔ هر عنوان، فیلترهای چندانتخابی، ویرایش همهٔ ریزتعهدهای هم‌عنوان و اصلاح پرداخت با تاریخچه.',
+                       'مدیریت تعهدات، اقساط، پرداخت‌ها و رابط کاربری')"""
+        )
+        db.execute(
+            """INSERT OR IGNORE INTO release_history(version, released_at, title, description, affected_areas)
                VALUES ('0.3.0', '2026-09-19T00:00:00+03:30', 'تقویم شمسی',
                        'ورود، نمایش و فیلتر تاریخ‌ها با تقویم جلالی و نام ماه‌های فارسی.',
                        'رابط کاربری، API، گزارش‌ها و مستندات')"""
